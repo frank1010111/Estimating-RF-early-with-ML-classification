@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
 from sklearn import preprocessing
-from model_functions import GaussRankScaler
+from gauss_rank_scaler import GaussRankScaler
 from sklearn.model_selection import train_test_split
 import xgboost as xgb
 import shap
