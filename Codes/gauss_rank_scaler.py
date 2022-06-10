@@ -1,4 +1,6 @@
 """From https://github.com/aldente0630/gauss-rank-scaler"""
+from __future__ import annotations
+
 import numpy as np
 from joblib import Parallel, delayed
 from scipy.interpolate import interp1d
