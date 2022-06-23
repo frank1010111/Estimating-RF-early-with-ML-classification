@@ -10,7 +10,7 @@ Run
 python -m venv venv
 source venv/bin/activate
 pip install -U pip
-pip install -r requirements.txt
+pip install .[dev]
 ```
 
 Then try out the python files in `Codes`

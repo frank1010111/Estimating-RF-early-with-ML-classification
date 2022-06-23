@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "recovery-factor"
+version = "0.1.0"
+readme = "README.md"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+]
+dependencies = [
+    "joblib",
+    "matplotlib",
+    "numpy",
+    "pandas",
+    "shap",
+    "sklearn",
+    "seaborn",
+    "statsmodels",
+    "xgboost",
+    "xlrd",
+    "yellowbrick",
+    "openpyxl",
+    "thefuzz[speedup]",
+    "wheel",
+]
+
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "flake8",
+    "flake8-bugbear",
+    "pre-commit",
+    "jupyterlab",
+]
+
+
+[tool.black]
+line-length = 99
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+
+[tool.pylint.format]
+max-line-length = "99"
