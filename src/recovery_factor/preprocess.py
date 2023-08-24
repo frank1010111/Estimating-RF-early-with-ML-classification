@@ -1,9 +1,7 @@
+"""Pre-process data to prepare it for machine learning."""
 import pandas as pd
 from sklearn.preprocessing import OrdinalEncoder
-
-# df = pd.read_csv("commercial_atlas.csv", encoding="ISO-8859-1", engine="python")
-# dftoris = pd.read_csv("toris.csv", encoding="ISO-8859-1", engine="python")
-# dftoris = dftoris.dropna(how="any")
+from sklearn.model_selection import train_test_split
 
 
 def clean(
@@ -54,3 +52,12 @@ def clean(
 
     df_out = pd.concat([dfnum, dfcat], axis=1)
     return df_out
+
+def split(df_x: pd.DataFrame, df_y: pd.Series):
+    X_train, X_test, y_train, y_test = train_test_split(
+        df_x, df_y, test_size=0.1, random_state=42, stratify=df_y
+    )
+
+    y_train = y_train.astype(int)
+    y_test = y_test.astype(int)
+    return X_train, X_test, y_train, y_test
