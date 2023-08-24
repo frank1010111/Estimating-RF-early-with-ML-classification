@@ -33,13 +33,7 @@ dependencies = [
 
 
 [project.optional-dependencies]
-dev = [
-    "black",
-    "flake8",
-    "flake8-bugbear",
-    "pre-commit",
-    "jupyterlab",
-]
+dev = ["black", "ruff", "pre-commit", "ipykernel"]
 
 
 [tool.black]
