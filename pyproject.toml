@@ -20,7 +20,7 @@ dependencies = [
   "pandas",
   "ray[tune]",
   "shap",
-  "sklearn",
+  "scikit-learn",
   "seaborn",
   "statsmodels",
   "xgboost",
