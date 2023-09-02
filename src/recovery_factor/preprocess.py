@@ -1,6 +1,7 @@
 """Pre-process data to prepare it for machine learning."""
+from __future__ import annotations
+
 import pandas as pd
-from sklearn.preprocessing import OrdinalEncoder
 from sklearn.model_selection import train_test_split
 
 
@@ -24,7 +25,9 @@ def clean(
     rf_col = "RECOVERY FACTOR"
     cleaned_data = cleaned_data.dropna(how="any", subset=[rf_col])
     for col in (rf_col, "POROSITY", "WATER SATURATION"):
-        cleaned_data = cleaned_data[lambda x: x[col].isnull() | ((0 <= x[col]) & (x[col] <= 1))]
+        cleaned_data = cleaned_data[
+            lambda x: x[col].isnull() | ((x[col] >= 0) & (x[col] <= 1))  # noqa: B023
+        ]
     cleaned_data = cleaned_data[(cleaned_data["FVF"] >= 0) | (cleaned_data["FVF"].isnull())]
     cleaned_data = cleaned_data[(cleaned_data["FVF"] <= 10) | (cleaned_data["FVF"].isnull())]
     cleaned_data = cleaned_data[(cleaned_data["GOR"] >= 0) | (cleaned_data["GOR"].isnull())]
@@ -52,6 +55,7 @@ def clean(
 
     df_out = pd.concat([dfnum, dfcat], axis=1)
     return df_out
+
 
 def split(df_x: pd.DataFrame, df_y: pd.Series):
     X_train, X_test, y_train, y_test = train_test_split(
