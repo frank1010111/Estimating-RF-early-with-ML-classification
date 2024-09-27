@@ -29,7 +29,6 @@ dependencies = [
   "yellowbrick",
   "openpyxl",
   "thefuzz[speedup]",
-  "tune-sklearn",
 ]
 
 [project.scripts]
@@ -37,7 +36,7 @@ rf-train = "recovery_factor.train:main"
 
 
 [project.optional-dependencies]
-dev = ["black", "ruff", "pre-commit", "ipykernel"]
+dev = ["black", "ruff", "pre-commit", "ipykernel", "jinja2"]
 
 
 [tool.black]
