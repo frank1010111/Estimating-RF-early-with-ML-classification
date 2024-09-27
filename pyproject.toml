@@ -1,18 +1,11 @@
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "recovery-factor"
 version = "0.1.0"
 readme = "README.md"
-classifiers = [
-  "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.8",
-  "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",
-]
 dependencies = [
   "hyperopt",
   "joblib",
@@ -80,7 +73,6 @@ extend-ignore = [
   "RET504", # 'unnecessary' variable assignment before return statement
 ]
 line-length = 99
-target-version = "py37"
 unfixable = [
   "T20",  # Removes print statements
   "F841", # Removes unused variables
