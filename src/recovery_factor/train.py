@@ -6,7 +6,9 @@ import click
 import pandas as pd
 import xgboost as xgb
 from ray import tune
-from ray.tune.sklearn import TuneSearchCV
+from ray.air.config import RunConfig
+from ray.tune.schedulers import ASHAScheduler
+from ray.tune.search.hyperopt import HyperOptSearch
 
 from recovery_factor.preprocess import clean, split
 
@@ -33,17 +35,32 @@ def tune_xgboost(x_train, y_train, n_trials: int = 10):
         "num_class": 10,
     }
 
-    tuner = TuneSearchCV(
-        xgb.XGBClassifier(**locked_params),
-        search_space,
-        n_trials=n_trials,
-        search_optimization="hyperopt",
-        early_stopping=True,
-        random_state=42,
-        mode="min",
+    def train_xgboost(config):
+        model = xgb.XGBClassifier(**locked_params, **config)
+        model.fit(x_train, y_train)
+
+    # Use the ASHA scheduler for early stopping
+    scheduler = ASHAScheduler(max_t=10, grace_period=1, reduction_factor=2)
+
+    # Use HyperOptSearch for optimization
+    search_algo = HyperOptSearch(metric="mlogloss", mode="min")
+
+    # Create a Ray Tuner object with the search space, algorithm, and scheduler
+    tuner = tune.Tuner(
+        tune.with_resources(train_xgboost, {"cpu": 4}),
+        param_space=search_space,
+        tune_config=tune.TuneConfig(
+            search_alg=search_algo,
+            scheduler=scheduler,
+            num_samples=n_trials,
+        ),
+        run_config=RunConfig(verbose=1),
     )
-    tuner.fit(x_train, y_train)
-    return tuner
+
+    # Run the hyperparameter search
+    results = tuner.fit()
+
+    return results
 
 
 @click.command()
