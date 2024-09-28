@@ -7,12 +7,12 @@ name = "recovery-factor"
 version = "0.1.0"
 readme = "README.md"
 dependencies = [
-  "hyperopt",
+  #"hyperopt",
+  "git+https://github.com/hyperopt/hyperopt.git@e9122b53041bf4bddff402ab6df251d379cf3420",
   "joblib",
   "matplotlib",
   "numpy",
   "pandas",
-  "ray[tune]",
   "shap",
   "scikit-learn",
   "seaborn",
