@@ -14,3 +14,5 @@ pip install .[dev]
 ```
 
 Then try out the python files in `Codes`
+
+You might have to install shap, then ".[dev]"
