@@ -10,6 +10,7 @@ dependencies = [
   #"hyperopt",
   "git+https://github.com/hyperopt/hyperopt.git@e9122b53041bf4bddff402ab6df251d379cf3420",
   "joblib",
+  "jinja2",
   "matplotlib",
   "numpy",
   "pandas",
@@ -22,6 +23,7 @@ dependencies = [
   "yellowbrick",
   "openpyxl",
   "thefuzz[speedup]",
+  "tabulate",
 ]
 
 [project.scripts]
