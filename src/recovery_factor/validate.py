@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 import pandas as pd
@@ -9,13 +10,14 @@ from sklearn.metrics import (
     confusion_matrix,
     f1_score,
     precision_score,
+    r2_score,
     recall_score,
 )
 from sklearn.model_selection import train_test_split
 
 from recovery_factor.preprocess import clean
 
-data_root = Path(__file__) / "../../data_run"
+data_root = Path(__file__).parent / "../../data_run"
 fixed_params = {
     "objective": "multi:softmax",
     "eval_metric": "mlogloss",
@@ -29,33 +31,46 @@ fixed_params = {
     "num_class": 10,
     "device": "cpu",
 }
+CLASS_DICT = {"1% to 10%": 0} | {f"{n}0% to {n+1}0%": n for n in range(1, 10)}
+DEFAULT_METRICS = {
+    "accuracy": accuracy_score,
+    "precision": lambda y_true, y_pred: precision_score(y_true, y_pred, average="weighted"),
+    "recall": lambda y_true, y_pred: recall_score(y_true, y_pred, average="weighted"),
+    "f1": lambda y_true, y_pred: f1_score(y_true, y_pred, average="weighted"),
+    "R2": r2_score,
+}
 
 
-def get_scores(params: dict[str, float], training_data: str) -> dict[str, dict[str, float]]:
+def get_scores(
+    params: dict[str, float], training_data: str, metrics: dict[str, Callable] | None = None
+) -> dict[str, dict[str, float]]:
     """
     Trains an XGBoost model and evaluates performance on the training and test set.
 
     Args:
         params (dict): Hyperparameters for the XGBoost model.
         training_data (str): Name of the CSV file (without extension) to load the training data.
-        data_root (Path): The root directory containing the CSV files.
-        fixed_params (dict): Fixed parameters for the XGBoost model.
+        metrics (dict): ML metrics to report. Accepts a dictionary of name:callable.
+            The callables should take y_true and y_pred as arguments and return a float.
+            By default, includes accuracy, precision, recall, f1, and R-squared.
 
     Returns:
         dict: A dictionary containing accuracy, precision, recall, and F1 scores for
         training and test data.
     """
+    if metrics is None:
+        metrics = DEFAULT_METRICS
     # convert float to int for some hyperparams
     params["max_depth"] = int(params["max_depth"])
     params["min_child_weight"] = int(params["min_child_weight"])
 
     # Load and preprocess the data
     df_raw = pd.read_csv(data_root / f"{training_data}.csv")
-    df_clean = clean(df_raw)  # Assuming you have a 'clean' function for data cleaning
+    df_clean = clean(df_raw)
 
     X_train, X_test, y_train, y_test = train_test_split(
         df_clean.drop(columns=["RECOVERY FACTOR", "Class"]),
-        df_clean["Class"].astype("category").cat.codes,
+        df_clean["Class"].replace(CLASS_DICT),
         test_size=0.2,
         random_state=42,
     )
@@ -64,21 +79,23 @@ def get_scores(params: dict[str, float], training_data: str) -> dict[str, dict[s
     estimator.fit(X_train, y_train)
 
     scores = {}
-    # Predictions and metrics on the training set
     train_predict = estimator.predict(X_train)
-    scores["Train"] = {}
-    scores["Train"]["accuracy"] = accuracy_score(y_train, train_predict)
-    scores["Train"]["precision"] = precision_score(y_train, train_predict, average="weighted")
-    scores["Train"]["recall"] = recall_score(y_train, train_predict, average="weighted")
-    scores["Train"]["f1"] = f1_score(y_train, train_predict, average="weighted")
+    scores["Train"] = calculate_metrics(y_train, train_predict, metrics)
 
-    # Predictions and metrics on the test set
     test_predict = estimator.predict(X_test)
-    scores["Test"] = {}
-    scores["Test"]["accuracy"] = accuracy_score(y_test, test_predict)
-    scores["Test"]["precision"] = precision_score(y_test, test_predict, average="weighted")
-    scores["Test"]["recall"] = recall_score(y_test, test_predict, average="weighted")
-    scores["Test"]["f1"] = f1_score(y_test, test_predict, average="weighted")
+    scores["Test"] = calculate_metrics(y_test, test_predict, metrics)
+
+    independent = set("TCA") - set(training_data)
+    if independent:
+        csv_independent = next(
+            (data_root / "independent/").glob(independent.pop().lower() + "*.csv")
+        )
+        df_independent = pd.read_csv(csv_independent).pipe(clean)
+        X_independent = df_independent.drop(columns=["RECOVERY FACTOR", "Class"])
+        y_independent = df_independent["Class"].replace(CLASS_DICT)
+
+        independent_predict = estimator.predict(X_independent)
+        scores["Independent"] = calculate_metrics(y_independent, independent_predict, metrics)
 
     return scores
 
@@ -121,7 +138,32 @@ def get_confusion_matrices(params: dict[str, float], training_data: str):
     test_predict = estimator.predict(X_test)
     confusion_matrices["Test"] = confusion_matrix(y_test, test_predict)
 
+    independent = set("TCA") - set(training_data)
+    if independent:
+        csv_independent = next(
+            (data_root / "independent/").glob(independent.pop().lower() + "*.csv")
+        )
+        df_independent = pd.read_csv(csv_independent).pipe(clean)
+        X_independent = df_independent.drop(columns=["RECOVERY FACTOR", "Class"])
+        y_independent = df_independent["Class"].replace(CLASS_DICT)
+        independent_predict = estimator.predict(X_independent)
+        confusion_matrices["Independent"] = confusion_matrix(y_independent, independent_predict)
     return confusion_matrices
+
+
+def calculate_metrics(y_true, y_pred, metrics):
+    """
+    Calculate the given metrics on the provided true and predicted values.
+
+    Args:
+        y_true (array-like): True labels.
+        y_pred (array-like): Predicted labels.
+        metrics (dict): A dictionary where keys are metric names and values are metric functions.
+
+    Returns:
+        dict: A dictionary containing calculated metric values.
+    """
+    return {metric_name: metric_fn(y_true, y_pred) for metric_name, metric_fn in metrics.items()}
 
 
 # def ali_plots():
