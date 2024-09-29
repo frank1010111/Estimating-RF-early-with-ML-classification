@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import xgboost as xgb
 from sklearn.metrics import (
@@ -32,8 +33,32 @@ fixed_params = {
     "device": "cpu",
 }
 CLASS_DICT = {"1% to 10%": 0} | {f"{n}0% to {n+1}0%": n for n in range(1, 10)}
+
+
+def within_1_accuracy(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+    """
+    Calculate the proportion of predictions that are within ±1 of the true class.
+
+    Args:
+        y_true (array-like): True class labels.
+        y_pred (array-like): Predicted class labels.
+
+    Returns:
+        float: The within-1 accuracy.
+    """
+    y_true = np.array(y_true)
+    y_pred = np.array(y_pred)
+
+    # Calculate if the prediction is within ±1 of the true value
+    within_1 = np.abs(y_true - y_pred) <= 1
+
+    # Return the proportion of predictions that are within ±1
+    return np.mean(within_1)
+
+
 DEFAULT_METRICS = {
     "accuracy": accuracy_score,
+    "within-1 accuracy": within_1_accuracy,
     "precision": lambda y_true, y_pred: precision_score(y_true, y_pred, average="weighted"),
     "recall": lambda y_true, y_pred: recall_score(y_true, y_pred, average="weighted"),
     "f1": lambda y_true, y_pred: f1_score(y_true, y_pred, average="weighted"),
@@ -45,7 +70,7 @@ def get_scores(
     params: dict[str, float], training_data: str, metrics: dict[str, Callable] | None = None
 ) -> dict[str, dict[str, float]]:
     """
-    Trains an XGBoost model and evaluates performance on the training and test set.
+    Train an XGBoost model and evaluates performance on the training and test set.
 
     Args:
         params (dict): Hyperparameters for the XGBoost model.
