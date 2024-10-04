@@ -85,23 +85,9 @@ def get_scores(
     """
     if metrics is None:
         metrics = DEFAULT_METRICS
-    # convert float to int for some hyperparams
-    params["max_depth"] = int(params["max_depth"])
-    params["min_child_weight"] = int(params["min_child_weight"])
 
-    # Load and preprocess the data
-    df_raw = pd.read_csv(data_root / f"{training_data}.csv")
-    df_clean = clean(df_raw)
-
-    X_train, X_test, y_train, y_test = train_test_split(
-        df_clean.drop(columns=["RECOVERY FACTOR", "Class"]),
-        df_clean["Class"].replace(CLASS_DICT),
-        test_size=0.2,
-        random_state=42,
-    )
-
-    estimator = xgb.XGBClassifier(**fixed_params, **params)
-    estimator.fit(X_train, y_train)
+    X_train, X_test, y_train, y_test = get_split_data(training_data)
+    estimator = train_model(params, training_data)
 
     scores = {}
     train_predict = estimator.predict(X_train)
@@ -110,15 +96,8 @@ def get_scores(
     test_predict = estimator.predict(X_test)
     scores["Test"] = calculate_metrics(y_test, test_predict, metrics)
 
-    independent = set("TCA") - set(training_data)
-    if independent:
-        csv_independent = next(
-            (data_root / "independent/").glob(independent.pop().lower() + "*.csv")
-        )
-        df_independent = pd.read_csv(csv_independent).pipe(clean)
-        X_independent = df_independent.drop(columns=["RECOVERY FACTOR", "Class"])
-        y_independent = df_independent["Class"].replace(CLASS_DICT)
-
+    X_independent, y_independent = get_independent_data(training_data)
+    if X_independent is not None:
         independent_predict = estimator.predict(X_independent)
         scores["Independent"] = calculate_metrics(y_independent, independent_predict, metrics)
 
@@ -133,28 +112,15 @@ def get_confusion_matrices(params: dict[str, float], training_data: str):
     Args:
         params (dict): Hyperparameters for the XGBoost model.
         training_data (str): Name of the CSV file (without extension) to load the training data.
-            Choices are TC, TA, CA, and TCA
+    Choices are TC, TA, CA, and TCA
         data_root (Path): The root directory containing the CSV files.
         fixed_params (dict): Fixed parameters for the XGBoost model.
 
     Returns:
         dict: A dictionary containing the confusion matrices for both the training and test data.
     """
-    # convert float to int for some hyperparams
-    params["max_depth"] = int(params["max_depth"])
-    params["min_child_weight"] = int(params["min_child_weight"])
-
-    df_raw = pd.read_csv(data_root / f"{training_data}.csv")
-    df_clean = clean(df_raw)
-    X_train, X_test, y_train, y_test = train_test_split(
-        df_clean.drop(columns=["RECOVERY FACTOR", "Class"]),
-        df_clean["Class"].astype("category").cat.codes,
-        test_size=0.2,
-        random_state=42,
-    )
-
-    estimator = xgb.XGBClassifier(**fixed_params, **params)
-    estimator.fit(X_train, y_train)
+    estimator = train_model(params, training_data)
+    X_train, X_test, y_train, y_test = get_split_data(training_data)
 
     confusion_matrices = {}
     train_predict = estimator.predict(X_train)
@@ -163,14 +129,8 @@ def get_confusion_matrices(params: dict[str, float], training_data: str):
     test_predict = estimator.predict(X_test)
     confusion_matrices["Test"] = confusion_matrix(y_test, test_predict)
 
-    independent = set("TCA") - set(training_data)
-    if independent:
-        csv_independent = next(
-            (data_root / "independent/").glob(independent.pop().lower() + "*.csv")
-        )
-        df_independent = pd.read_csv(csv_independent).pipe(clean)
-        X_independent = df_independent.drop(columns=["RECOVERY FACTOR", "Class"])
-        y_independent = df_independent["Class"].replace(CLASS_DICT)
+    X_independent, y_independent = get_independent_data(training_data)
+    if X_independent is not None:
         independent_predict = estimator.predict(X_independent)
         confusion_matrices["Independent"] = confusion_matrix(y_independent, independent_predict)
     return confusion_matrices
@@ -189,6 +149,43 @@ def calculate_metrics(y_true, y_pred, metrics):
         dict: A dictionary containing calculated metric values.
     """
     return {metric_name: metric_fn(y_true, y_pred) for metric_name, metric_fn in metrics.items()}
+
+
+def train_model(params: dict[str, float], training_data: str):
+    X_train, _, y_train, _ = get_split_data(training_data)
+    params["max_depth"] = int(params["max_depth"])
+    params["min_child_weight"] = int(params["min_child_weight"])
+
+    estimator = xgb.XGBClassifier(**fixed_params, **params)
+    estimator.fit(X_train, y_train)
+    return estimator
+
+
+def get_split_data(training_data: str):
+    df_raw = pd.read_csv(data_root / f"{training_data}.csv")
+    df_clean = clean(df_raw)
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        df_clean.drop(columns=["RECOVERY FACTOR", "Class"]),
+        df_clean["Class"].replace(CLASS_DICT),
+        test_size=0.2,
+        random_state=42,
+    )
+    return X_train, X_test, y_train, y_test
+
+
+def get_independent_data(training_data: str):
+    independent = set("TCA") - set(training_data)
+    if independent:
+        csv_independent = next(
+            (data_root / "independent/").glob(independent.pop().lower() + "*.csv")
+        )
+        df_independent = pd.read_csv(csv_independent).pipe(clean)
+        X_independent = df_independent.drop(columns=["RECOVERY FACTOR", "Class"])
+        y_independent = df_independent["Class"].replace(CLASS_DICT)
+
+        return X_independent, y_independent
+    return None, None
 
 
 # def ali_plots():
