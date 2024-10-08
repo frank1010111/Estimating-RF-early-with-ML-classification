@@ -1,4 +1,5 @@
 """Pre-process data to prepare it for machine learning."""
+
 from __future__ import annotations
 
 import pandas as pd
@@ -10,7 +11,10 @@ def clean(
     column_missing_fraction: float = 0.55,
     row_missing_fraction: float = 0.7,
 ) -> pd.DataFrame:
-    """Clean dataframe, removing invalid numbers and columns with too many NaNs.
+    r"""Clean dataframe, removing invalid numbers and columns with too many NaNs.
+
+    Limits formation volume factor to $0\le B_o\le10$, GOR to $0\le GOR \le 60$,
+    and reserves to $0\le R \le 5\times10^{11}$.
 
     Args:
         raw_data (pd.DataFrame): Input dataframe
