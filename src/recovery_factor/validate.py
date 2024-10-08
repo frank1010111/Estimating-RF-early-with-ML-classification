@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from collections.abc import Callable
 from pathlib import Path
 
@@ -32,7 +33,7 @@ fixed_params = {
     "num_class": 10,
     "device": "cpu",
 }
-CLASS_DICT = {"1% to 10%": 0} | {f"{n}0% to {n+1}0%": n for n in range(1, 10)}
+CLASS_DICT = {"1% to 10%": "0"} | {f"{n}0% to {n+1}0%": str(n) for n in range(1, 10)}
 
 
 def within_1_accuracy(y_true: np.ndarray, y_pred: np.ndarray) -> float:
@@ -165,12 +166,14 @@ def get_split_data(training_data: str):
     df_raw = pd.read_csv(data_root / f"{training_data}.csv")
     df_clean = clean(df_raw)
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        df_clean.drop(columns=["RECOVERY FACTOR", "Class"]),
-        df_clean["Class"].replace(CLASS_DICT),
-        test_size=0.2,
-        random_state=42,
-    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        X_train, X_test, y_train, y_test = train_test_split(
+            df_clean.drop(columns=["RECOVERY FACTOR", "Class"]),
+            df_clean["Class"].replace(CLASS_DICT).astype(int),
+            test_size=0.2,
+            random_state=42,
+        )
     return X_train, X_test, y_train, y_test
 
 
@@ -182,55 +185,7 @@ def get_independent_data(training_data: str):
         )
         df_independent = pd.read_csv(csv_independent).pipe(clean)
         X_independent = df_independent.drop(columns=["RECOVERY FACTOR", "Class"])
-        y_independent = df_independent["Class"].replace(CLASS_DICT)
+        y_independent = df_independent["Class"].replace(CLASS_DICT).astype(int)
 
         return X_independent, y_independent
     return None, None
-
-
-# def ali_plots():
-#     plt.figure(figsize=(8, 4))
-#     plt.scatter(y_test, y_pred, c="r", label="Test Measured RF")
-#     plt.xlim([0, 10])
-#     plt.ylim([0, 10])
-#     plt.plot([0, 10], [0, 10], color="black", linewidth=1, label="y = x")
-#     plt.xlabel("Measured RF")
-#     plt.ylabel("Estimated RF")
-#     plt.title("Measured RF Vs Estimated RF (Test Dataset)")
-#     plt.legend()
-#     plt.grid(False)
-#     plt.savefig("Measured RF Vs Estimated RF (Test Dataset)", bbox_inches="tight")
-#
-#     plt.figure(figsize=(8, 4))
-#     plt.scatter(y_train, y_pred1, c="b", label="Train Measured RF")
-#     plt.plot([0, 10], [0, 10], color="black", linewidth=1, label="y = x")
-#     plt.xlim([0, 10])
-#     plt.ylim([0, 10])
-#     plt.xlabel("Measured RF")
-#     plt.ylabel("Estimated RF")
-#     plt.title("Measured RF Vs Estimated RF (Train Dataset)")
-#     plt.legend()
-#     plt.grid(False)
-#     plt.savefig("Measured RF Vs Estimated RF (Train Dataset)", bbox_inches="tight")
-#
-#     plt.figure(figsize=(8, 4))
-#     x_ax = range(len(y_test))
-#     plt.plot(x_ax, y_test, ".", label="Measured", color="orange")
-#     plt.plot(x_ax, y_pred, ".", label="Estimated", color="blue")
-#     plt.xlabel("Sample")
-#     plt.ylabel("Measured/Estimated RF")
-#     plt.title("Measured RF Vs. Estimated RF Test Dataset")
-#     plt.legend()
-#     plt.grid(False)
-#     plt.savefig("Measured Ksat Vs. Estimated Ksat (Test Dataset).png", bbox_inches="tight")
-#
-#     plt.figure(figsize=(8, 4))
-#     x_ax = range(len(y_train))
-#     plt.plot(x_ax, y_train, ".", label="Measured", color="orange")
-#     plt.plot(x_ax, y_pred1, ".", label="Estimated", color="blue")
-#     plt.xlabel("Sample")
-#     plt.ylabel("Measured/Estimated RF")
-#     plt.title("Measured RF Vs. Estimated RF Train Dataset")
-#     plt.legend()
-#     plt.grid(False)
-#     plt.savefig("Measured Ksat Vs. Estimated Ksat (Train Dataset).png", bbox_inches="tight")
